@@ -25,7 +25,10 @@ what is knowingly broken.
   on the server. Never put the answer in a column the browser can select.
 - `src/lib/db.ts` is every read and write the page makes, and the Swedish
   translation of the error codes the database raises.
-- `src/app/page.tsx` is the whole UI.
+- `src/app/page.tsx` runs on the server, reads `SUPABASE_URL` and
+  `SUPABASE_ANON_KEY` at request time and hands them to `src/app/app.tsx`,
+  which is the whole UI. Plain names on purpose: Vercel refuses to store a
+  `NEXT_PUBLIC_` variable as Secret.
 
 ## Running it
 
@@ -33,9 +36,9 @@ what is knowingly broken.
 npm run dev
 ```
 
-Needs `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` (see `.env.example`). Without them the app
-shows "Ingen databas konfigurerad" and nothing else can be exercised.
+Needs `.env.local` with `SUPABASE_URL` and `SUPABASE_ANON_KEY` (see
+`.env.example`). Without them the app shows "Ingen databas konfigurerad"
+and nothing else can be exercised.
 
 ```bash
 npm run build
@@ -51,7 +54,7 @@ you told Max exactly what to tap to see it.
 ## Sensitive
 
 - Never commit `.env*`, keys or tokens.
-- `NEXT_PUBLIC_*` are baked in at **build** time. Changing them in Vercel does
-  nothing until a redeploy.
+- Environment variables are read per request, but Vercel still needs a
+  redeploy after they change.
 - Deploys happen through the Vercel GitHub App on push to `main`. Ask before
   pushing.

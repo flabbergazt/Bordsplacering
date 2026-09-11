@@ -5,7 +5,7 @@
  * supabase/schema.sql, which are the only things allowed to insert.
  */
 
-import { supabase } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type Guest = {
   id: string;
@@ -24,14 +24,8 @@ export type Table = {
   guests: Guest[];
 };
 
-function client() {
-  if (!supabase) throw new Error("not_configured");
-  return supabase;
-}
-
 /** All tables with their guests, oldest guest first. */
-export async function loadTables(): Promise<Table[]> {
-  const db = client();
+export async function loadTables(db: SupabaseClient): Promise<Table[]> {
   const [tables, guests] = await Promise.all([
     db.from("tables").select("id, slot, name, question, capacity, created_at").order("slot"),
     db.from("guests").select("id, table_id, name, created_at").order("created_at"),
@@ -51,7 +45,7 @@ export async function loadTables(): Promise<Table[]> {
   }));
 }
 
-export async function createTable(input: {
+export async function createTable(db: SupabaseClient, input: {
   slot: number;
   name: string;
   creator: string;
@@ -59,7 +53,7 @@ export async function createTable(input: {
   answer: string;
   capacity: number;
 }): Promise<void> {
-  const { error } = await client().rpc("create_table", {
+  const { error } = await db.rpc("create_table", {
     p_slot: input.slot,
     p_name: input.name,
     p_creator: input.creator,
@@ -70,12 +64,12 @@ export async function createTable(input: {
   if (error) throw new Error(error.message);
 }
 
-export async function joinTable(input: {
+export async function joinTable(db: SupabaseClient, input: {
   tableId: string;
   name: string;
   answer: string;
 }): Promise<void> {
-  const { error } = await client().rpc("join_table", {
+  const { error } = await db.rpc("join_table", {
     p_table_id: input.tableId,
     p_name: input.name,
     p_answer: input.answer,
@@ -96,7 +90,6 @@ export function describeError(err: unknown): string {
     table_name_required: "Ge bordet ett namn.",
     question_required: "Skriv en fråga.",
     answer_required: "Skriv rätt svar.",
-    not_configured: "Ingen databas är konfigurerad.",
   };
   return known[code] ?? `Något gick fel: ${code}`;
 }
