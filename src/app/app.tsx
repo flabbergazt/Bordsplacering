@@ -17,7 +17,7 @@ import "swiper/css";
 import "swiper/css/effect-coverflow";
 
 import { makeClient } from "@/lib/supabase";
-import { createTable, describeError, joinTable, loadTables, renameTable, type Table } from "@/lib/db";
+import { createTable, describeError, joinTable, leaveTable, loadTables, renameTable, type Table } from "@/lib/db";
 import { darken, slotColor } from "@/lib/colors";
 import { buildCards, GROUP_CAPACITY, type Card } from "@/lib/groups";
 
@@ -94,15 +94,16 @@ export default function App({
   }
 
   return (
-    <main className="mx-auto max-w-xl pb-16 pt-6">
-      <header className="px-4">
+    <main className="pb-16 pt-6">
+      <header className="mx-auto max-w-xl px-4">
         <h1 className="text-3xl font-semibold tracking-tight">Vilka vill du sitta med?</h1>
         <p className="mt-1 text-neutral-600">
           Bläddra bland grupperna. Gå med i en, eller starta en egen på ett ledigt kort.
         </p>
       </header>
 
-      <section className="mt-5" aria-label="Grupper">
+      {/* Full viewport width, so the cards to the side show on a desktop too. */}
+      <section className="mt-5 w-full overflow-hidden" aria-label="Grupper">
         {loaded ? (
           <Swiper
             modules={[EffectCoverflow]}
@@ -132,11 +133,11 @@ export default function App({
       </section>
 
       {loadError && (
-        <p className="mx-4 mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{loadError}</p>
+        <p className="mx-auto mt-4 max-w-xl rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{loadError}</p>
       )}
 
       {loaded && active && (
-        <section id="panel" className="mx-4 mt-5 scroll-mt-4 rounded-2xl border border-neutral-300 bg-white p-4 shadow-sm">
+        <section id="panel" className="mx-4 mt-5 scroll-mt-4 rounded-2xl border border-neutral-300 bg-white p-4 shadow-sm sm:mx-auto sm:max-w-xl">
           {active.table ? (
             <JoinPanel key={active.table.id} db={db} table={active.table} onDone={refresh} />
           ) : (
@@ -145,7 +146,7 @@ export default function App({
         </section>
       )}
 
-      <section className="mt-8 px-4">
+      <section className="mx-auto mt-8 max-w-xl px-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-xl font-semibold">Alla grupper</h2>
           <span className="text-sm text-neutral-600">
@@ -200,8 +201,7 @@ function GroupCard({ card }: { card: Card }) {
     /* A placeholder: quiet, waiting to be taken. */
     return (
       <div className="flex h-full w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-neutral-300 bg-neutral-100/70 px-5 text-center text-neutral-500">
-        <span className="text-xs uppercase tracking-widest">{card.suggestion ? `Förslag · Grupp ${slot}` : "Ledig"}</span>
-        <span className="mt-1 text-2xl font-light leading-tight">{card.suggestion ?? `Grupp ${slot}`}</span>
+        <span className="text-2xl font-light leading-tight">{card.suggestion ?? "Ny grupp"}</span>
         <span className="mt-6 flex h-12 w-12 items-center justify-center rounded-full border-2 border-neutral-300 text-2xl font-light">
           +
         </span>
@@ -222,7 +222,9 @@ function GroupCard({ card }: { card: Card }) {
     >
       <div>
         <span className="text-xs uppercase tracking-widest opacity-80">Grupp {slot}</span>
-        <h3 className="mt-1 text-2xl font-bold leading-tight break-words">{table.name}</h3>
+        <h3 className={`mt-1 font-bold leading-tight break-words ${table.name.length > 12 ? "text-xl" : "text-2xl"}`}>
+          {table.name}
+        </h3>
       </div>
       <div>
         <p className="text-sm leading-snug opacity-90">
@@ -281,14 +283,19 @@ function CreatePanel({
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <PanelHeader title={suggestion ? `Starta ${suggestion}` : `Starta grupp ${slot}`} color="#d4d4d8" />
+      <PanelHeader title={suggestion ? `Starta ${suggestion}` : "Starta en ny grupp"} color="#d4d4d8" />
       <p className="text-sm text-neutral-600">
         Du blir första medlem. Alla som vill vara med måste svara rätt på din fråga.
         {suggestion ? " Namnet är ett förslag, byt om du vill." : ""}
       </p>
       <Field label="Gruppens namn" value={tableName} onChange={setTableName} placeholder="t.ex. Gänget från Lund" />
       <Field label="Ditt namn" value={creator} onChange={setCreator} placeholder="För- och efternamn" />
-      <Field label="Fråga" value={question} onChange={setQuestion} placeholder="t.ex. Vad heter vår katt?" />
+      <Field
+        label="Säkerhetsfråga som alla i gruppen kan svara på"
+        value={question}
+        onChange={setQuestion}
+        placeholder="t.ex. Vad heter vår katt?"
+      />
       <Field label="Rätt svar" value={answer} onChange={setAnswer} placeholder="Svaret, t.ex. Misse" />
       {error && <p className="text-sm text-red-700">{error}</p>}
       <button
@@ -313,10 +320,11 @@ function JoinPanel({
   table: Table;
   onDone: () => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"join" | "rename">("join");
+  const [mode, setMode] = useState<"join" | "rename" | "leave">("join");
   const [name, setName] = useState("");
   const [answer, setAnswer] = useState("");
   const [newName, setNewName] = useState(table.name);
+  const [leaving, setLeaving] = useState<string>(table.guests[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -355,6 +363,31 @@ function JoinPanel({
     }
   }
 
+  async function submitLeave(e: React.FormEvent) {
+    e.preventDefault();
+    const guest = table.guests.find((g) => g.id === leaving);
+    if (!guest) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await leaveTable(db, { tableId: table.id, guestId: guest.id, answer });
+      setNotice(`${guest.name} är borttagen från ${table.name}.`);
+      setAnswer("");
+      setMode("join");
+      await onDone();
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function switchTo(next: "join" | "rename" | "leave") {
+    setMode(next);
+    setError(null);
+    setNotice(null);
+  }
+
   return (
     <div className="space-y-3">
       <PanelHeader title={table.name} color={slotColor(table.slot)} />
@@ -373,7 +406,7 @@ function JoinPanel({
         <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">{notice}</p>
       )}
 
-      {mode === "join" ? (
+      {mode === "join" && (
         <form onSubmit={submitJoin} className="space-y-3 border-t border-neutral-200 pt-3">
           <p className="font-medium">Vill du vara med? Svara på gruppens fråga.</p>
           <p className="rounded-xl bg-neutral-100 px-4 py-3">{table.question}</p>
@@ -387,19 +420,14 @@ function JoinPanel({
           >
             {busy ? "Lägger till…" : "Gå med"}
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("rename");
-              setError(null);
-              setNotice(null);
-            }}
-            className="w-full py-2 text-sm text-neutral-600 underline-offset-2 hover:underline"
-          >
-            Byt namn på gruppen
-          </button>
+          <div className="flex justify-center gap-6">
+            <LinkButton onClick={() => switchTo("rename")}>Byt namn på gruppen</LinkButton>
+            <LinkButton onClick={() => switchTo("leave")}>Ta bort mig</LinkButton>
+          </div>
         </form>
-      ) : (
+      )}
+
+      {mode === "rename" && (
         <form onSubmit={submitRename} className="space-y-3 border-t border-neutral-200 pt-3">
           <p className="font-medium">Byt namn. Bara den som kan svaret får göra det.</p>
           <p className="rounded-xl bg-neutral-100 px-4 py-3">{table.question}</p>
@@ -413,16 +441,42 @@ function JoinPanel({
           >
             {busy ? "Sparar…" : "Spara namnet"}
           </button>
+          <div className="flex justify-center">
+            <LinkButton onClick={() => switchTo("join")}>Avbryt</LinkButton>
+          </div>
+        </form>
+      )}
+
+      {mode === "leave" && (
+        <form onSubmit={submitLeave} className="space-y-3 border-t border-neutral-200 pt-3">
+          <p className="font-medium">Ta bort ett namn. Bara den som kan svaret får göra det.</p>
+          <p className="rounded-xl bg-neutral-100 px-4 py-3">{table.question}</p>
+          <Field label="Svaret" value={answer} onChange={setAnswer} />
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">Vem ska bort?</span>
+            <select
+              value={leaving}
+              onChange={(e) => setLeaving(e.target.value)}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base"
+            >
+              {table.guests.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {error && <p className="text-sm text-red-700">{error}</p>}
           <button
-            type="button"
-            onClick={() => {
-              setMode("join");
-              setError(null);
-            }}
-            className="w-full py-2 text-sm text-neutral-600 underline-offset-2 hover:underline"
+            type="submit"
+            disabled={busy || !leaving}
+            className="w-full rounded-xl bg-red-700 px-4 py-3 font-semibold text-white disabled:opacity-50"
           >
-            Avbryt
+            {busy ? "Tar bort…" : "Ta bort från gruppen"}
           </button>
+          <div className="flex justify-center">
+            <LinkButton onClick={() => switchTo("join")}>Avbryt</LinkButton>
+          </div>
         </form>
       )}
     </div>
@@ -430,6 +484,18 @@ function JoinPanel({
 }
 
 /* ---------- Small shared pieces ---------- */
+
+function LinkButton({ onClick, children }: { onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="py-2 text-sm text-neutral-600 underline-offset-2 hover:underline"
+    >
+      {children}
+    </button>
+  );
+}
 
 function PanelHeader({ title, color }: { title: string; color: string }) {
   return (

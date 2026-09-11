@@ -172,7 +172,32 @@ begin
 end;
 $$;
 
+-- Leave a group. Right answer required, so nobody can remove someone else
+-- by accident, and nobody outside the group can remove anyone at all.
+create or replace function public.leave_table(
+  p_table_id uuid,
+  p_guest_id uuid,
+  p_answer   text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_answer text;
+begin
+  select answer into v_answer from table_answers where table_id = p_table_id;
+  if not found then raise exception 'table_not_found'; end if;
+  if v_answer <> normalize_text(p_answer) then raise exception 'wrong_answer'; end if;
+
+  delete from guests where id = p_guest_id and table_id = p_table_id;
+  if not found then raise exception 'guest_not_found'; end if;
+end;
+$$;
+
 grant execute on function public.normalize_text(text) to anon, authenticated;
+grant execute on function public.leave_table(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.rename_table(uuid, text, text) to anon, authenticated;
 grant execute on function public.create_table(integer, text, text, text, text, integer) to anon, authenticated;
 grant execute on function public.join_table(uuid, text, text) to anon, authenticated;

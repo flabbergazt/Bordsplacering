@@ -93,6 +93,20 @@ export async function renameTable(db: SupabaseClient, input: {
   if (error) throw new Error(error.message);
 }
 
+/** Remove one member. Needs the group's answer. */
+export async function leaveTable(db: SupabaseClient, input: {
+  tableId: string;
+  guestId: string;
+  answer: string;
+}): Promise<void> {
+  const { error } = await db.rpc("leave_table", {
+    p_table_id: input.tableId,
+    p_guest_id: input.guestId,
+    p_answer: input.answer,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** The database answers with short codes; this is what people read. */
 export function describeError(err: unknown): string {
   const code = err instanceof Error ? err.message : String(err);
@@ -102,6 +116,7 @@ export function describeError(err: unknown): string {
     table_full: "Gruppen är full.",
     slot_taken: "Någon hann före och tog den här gruppen. Välj en annan.",
     table_not_found: "Gruppen finns inte längre.",
+    guest_not_found: "Det namnet finns inte längre i gruppen.",
     name_required: "Skriv ditt namn.",
     table_name_required: "Ge gruppen ett namn.",
     question_required: "Skriv en fråga.",
