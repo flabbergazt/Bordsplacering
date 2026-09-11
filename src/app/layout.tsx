@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bordsplacering",
+  title: "Class of 2006 · 20th Alumni Reunion 2026",
   description: "Välj vilka du vill sitta med.",
 };
 

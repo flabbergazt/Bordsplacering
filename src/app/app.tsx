@@ -96,9 +96,10 @@ export default function App({
   return (
     <main className="pb-16 pt-6">
       <header className="mx-auto max-w-xl px-4">
-        <h1 className="text-3xl font-semibold tracking-tight">Vilka vill du sitta med?</h1>
-        <p className="mt-1 text-neutral-600">
-          Bläddra bland grupperna. Gå med i en, eller starta en egen på ett ledigt kort.
+        <p className="text-sm font-medium uppercase tracking-widest text-neutral-500">Class of 2006</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight">20th Alumni Reunion 2026</h1>
+        <p className="mt-3 text-neutral-600">
+          Vilka vill du sitta med? Bläddra bland grupperna. Gå med i en, eller starta en egen på ett ledigt kort.
         </p>
       </header>
 
