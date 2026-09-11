@@ -46,7 +46,11 @@ drop policy if exists "anyone can read guests" on public.guests;
 create policy "anyone can read guests"
   on public.guests for select to anon, authenticated using (true);
 
--- Belt and braces: even without RLS the API roles may not touch the answers.
+-- Say explicitly what the API roles may read, so the schema works whether or
+-- not the project "automatically exposes new tables". Nothing may be written
+-- directly; writes go through the functions below.
+grant usage on schema public to anon, authenticated;
+grant select on public.tables, public.guests to anon, authenticated;
 revoke all on public.table_answers from anon, authenticated;
 
 -- "Stockholm " and "stockholm" are the same answer, and the same name.
