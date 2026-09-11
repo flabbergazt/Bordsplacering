@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* One warm, light look. The page is read on a phone in a hand, not in a tab. */
+html,
+body {
+  background: #fbf7f1;
+  color: #1b1b1f;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #1b1b1f;
+  outline-offset: 2px;
+}
