@@ -1,7 +1,6 @@
 # NOTES
 
-- State: iteration 1 built and pushed (room drawing, start a table with question+answer, sit down with right answer, list of all tables). Supabase project and Vercel project created by Max; first production deploy in progress.
-- Next: Max tests on two phones. Then iteration 2: leave a table, warn on same name at several tables.
-- Room: src/lib/room.ts is a placeholder rectangle with 12 tables in a grid; redraw once Max sends the real room.
-- Known: no live updates (reload or return to the tab to refresh). No way to remove a name yet.
-- Variables are SUPABASE_URL and SUPABASE_ANON_KEY (no public prefix), read on the server in page.tsx. Vercel refused to save NEXT_PUBLIC_ names as Secret.
+- State: iteration 1 live at bordsplacering-delta.vercel.app and verified by Max on phones (start a table, join with right answer, wrong answer refused).
+- Next: iteration 2: leave a table (remove your own name), warn when the same name sits at several tables. Redraw the room in src/lib/room.ts when Max sends a sketch.
+- Setup done: Supabase project with schema.sql run; Vercel with SUPABASE_URL and SUPABASE_ANON_KEY as Secret; deploys on push to main.
+- Known: no live updates (reload or return to the tab to refresh). No way to remove a name yet. Room is a placeholder rectangle with 12 tables.
