@@ -1,8 +1,10 @@
 /*
  * Everything the app asks the database for, in one place.
  *
- * Reads go straight to the tables. Writes go through the two functions in
- * supabase/schema.sql, which are the only things allowed to insert.
+ * A "table" in the database is a group on screen; the name stuck from the
+ * first version. Reads go straight to the tables. Writes go through the
+ * functions in supabase/schema.sql, which are the only things allowed to
+ * write.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -77,17 +79,31 @@ export async function joinTable(db: SupabaseClient, input: {
   if (error) throw new Error(error.message);
 }
 
+/** Change a group's name. Needs the group's answer, so only members can. */
+export async function renameTable(db: SupabaseClient, input: {
+  tableId: string;
+  answer: string;
+  name: string;
+}): Promise<void> {
+  const { error } = await db.rpc("rename_table", {
+    p_table_id: input.tableId,
+    p_answer: input.answer,
+    p_name: input.name,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** The database answers with short codes; this is what people read. */
 export function describeError(err: unknown): string {
   const code = err instanceof Error ? err.message : String(err);
   const known: Record<string, string> = {
-    wrong_answer: "Fel svar. Fråga någon som redan sitter vid bordet.",
-    already_seated: "Det namnet sitter redan vid det här bordet.",
-    table_full: "Bordet är fullt.",
-    slot_taken: "Någon hann före och tog det här bordet. Välj ett annat.",
-    table_not_found: "Bordet finns inte längre.",
+    wrong_answer: "Fel svar. Fråga någon som redan är med i gruppen.",
+    already_seated: "Det namnet är redan med i den här gruppen.",
+    table_full: "Gruppen är full.",
+    slot_taken: "Någon hann före och tog den här gruppen. Välj en annan.",
+    table_not_found: "Gruppen finns inte längre.",
     name_required: "Skriv ditt namn.",
-    table_name_required: "Ge bordet ett namn.",
+    table_name_required: "Ge gruppen ett namn.",
     question_required: "Skriv en fråga.",
     answer_required: "Skriv rätt svar.",
   };

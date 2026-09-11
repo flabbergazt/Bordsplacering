@@ -1,4 +1,6 @@
--- Bordsplacering: tables, guests and the one secret per table (the answer).
+-- Bordsplacering: groups ("tables" in the database, the name stuck from the
+-- first version), their members ("guests") and the one secret per group
+-- (the answer).
 --
 -- Run this once in the Supabase SQL editor for a fresh project.
 --
@@ -11,7 +13,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.tables (
   id         uuid primary key default gen_random_uuid(),
-  slot       integer not null unique,          -- which drawn table in src/lib/room.ts
+  slot       integer not null unique,          -- the group's number on screen
   name       text not null,
   question   text not null,                    -- shown to everyone
   capacity   integer not null default 8,
@@ -146,6 +148,31 @@ exception
 end;
 $$;
 
+-- Rename a group. Right answer required, so only its members can.
+create or replace function public.rename_table(
+  p_table_id uuid,
+  p_answer   text,
+  p_name     text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_answer text;
+begin
+  if length(normalize_text(p_name)) = 0 then raise exception 'table_name_required'; end if;
+
+  select answer into v_answer from table_answers where table_id = p_table_id;
+  if not found then raise exception 'table_not_found'; end if;
+  if v_answer <> normalize_text(p_answer) then raise exception 'wrong_answer'; end if;
+
+  update tables set name = btrim(p_name) where id = p_table_id;
+end;
+$$;
+
 grant execute on function public.normalize_text(text) to anon, authenticated;
+grant execute on function public.rename_table(uuid, text, text) to anon, authenticated;
 grant execute on function public.create_table(integer, text, text, text, text, integer) to anon, authenticated;
 grant execute on function public.join_table(uuid, text, text) to anon, authenticated;

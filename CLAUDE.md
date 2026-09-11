@@ -2,10 +2,10 @@
 
 # Bordsplacering
 
-A one-page web app for a party: guests open a link on their phone, see the
-room with its tables, start a table of their own or sit down at one that
-exists. No login. A table is protected by a question its creator wrote; the
-right answer is the only key. Next.js + Supabase, deployed on Vercel.
+A one-page web app for a party: guests open a link on their phone, browse
+groups as cards in a carousel, join one or start their own. No login. A
+group is protected by a question its creator wrote; the right answer is
+the only key. Next.js + Supabase, deployed on Vercel.
 
 Owner: Max, a product manager, not a developer. Reply in Swedish; keep code,
 file names and commands in English. Agree the scope before writing code.
@@ -15,20 +15,25 @@ what is knowingly broken.
 
 ## How it hangs together
 
-- `src/lib/room.ts` is the drawing: walls, stage, bar, entrance, where the
-  tables stand, how many fit at each, the colours. Redraw the room here and
-  nowhere else. A drawn table is a **slot**; a slot gets a database row the
-  moment someone starts a table there.
-- `supabase/schema.sql` is the data model and the only way to write. The
-  answer to a table's question is stored in `table_answers`, which the API
-  cannot read. Joining goes through `join_table()`, which compares answers
-  on the server. Never put the answer in a column the browser can select.
+- A group is a numbered slot. `src/lib/groups.ts` decides which cards to
+  show: every group that exists, then the suggested names nobody has taken
+  (the `SUGGESTIONS` list, by number), then two blank cards. A suggestion
+  is a placeholder; the card is not active until someone starts it.
+- `supabase/schema.sql` is the data model and the only way to write. In the
+  database a group is still called a `table` and a member a `guest`; the
+  names stuck from the first version. The answer to a group's question is
+  stored in `table_answers`, which the API cannot read. Joining and
+  renaming go through `join_table()` and `rename_table()`, which compare
+  answers on the server. Never put the answer in a column the browser can
+  select.
 - `src/lib/db.ts` is every read and write the page makes, and the Swedish
   translation of the error codes the database raises.
 - `src/app/page.tsx` runs on the server, reads `SUPABASE_URL` and
   `SUPABASE_ANON_KEY` at request time and hands them to `src/app/app.tsx`,
   which is the whole UI. Plain names on purpose: Vercel refuses to store a
   `NEXT_PUBLIC_` variable as Secret.
+- The carousel is Swiper with the coverflow effect, `depth: 0` on purpose:
+  slides pushed back in 3D stop receiving taps in Chrome.
 
 ## Running it
 

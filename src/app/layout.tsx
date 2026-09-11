@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Bordsplacering",
-  description: "Välj ett bord eller starta ett nytt.",
+  description: "Välj vilka du vill sitta med.",
 };
 
 export const viewport: Viewport = {
