@@ -1,117 +1,96 @@
 /*
  * The room, as a drawing.
  *
- * Everything about how the room looks lives here: the walls, the fixed
- * things in it (stage, bar, pillars, entrance) and where the tables stand,
- * how many fit at each, the colours. Change this file to redraw the room;
- * nothing else needs to know.
+ * The background is the 1925 plan of the oval "Museum" hall at
+ * Handelshögskolan, cropped to the hall (public/room.jpg). Everything laid
+ * on top of it is defined here: the stage, the bar, the entrance and where
+ * the tables stand. Change this file to move things; nothing else needs to
+ * know.
  *
- * The room is the oval "Museum" hall at Handelshögskolan, measured off the
- * 1925 plan: about 16.5 m wide and 14 m deep, four pillars inside. One
- * metre is 60 units here, so the drawing is roughly to scale. (0, 0) is the
- * top left corner; the stage is at the top, the entrance at the bottom.
+ * Coordinates are pixels in that image. The plan's scale bar gives
+ * 50 px per metre, so a table drawn here is the size it will be on the
+ * night. (0, 0) is the top left corner; the stage is at the top, the
+ * entrance at the bottom.
  */
 
 export type Slot = {
   /** Stable number, stored in the database when someone starts the table. */
   slot: number;
+  /** Centre of the table top. */
   x: number;
   y: number;
+  /** "h": long side left-right. "v": long side up-down. */
+  orientation: "h" | "v";
   /** How many can sit here. */
   capacity: number;
 };
 
-export type Feature = {
-  label: string;
-  /** SVG polygon points. */
-  points: string;
-  labelX: number;
-  labelY: number;
-  /** Degrees, for a label along a slanted thing like the bar. */
-  rotate?: number;
-};
-
-export type Pillar = { x: number; y: number; r: number };
+export const PX_PER_METRE = 50;
 
 export const ROOM = {
-  width: 1000,
-  height: 900,
+  image: { src: "/room.jpg", width: 911, height: 781 },
 
-  /** The walls: an oval. */
-  oval: { cx: 500, cy: 430, rx: 495, ry: 420 },
+  /** A table for eight: 2.0 x 0.8 m top, three a side and one at each end. */
+  tableTop: { w: 100, h: 40 },
+  /** Chairs are drawn as small circles this far out from the table edge. */
+  chair: { r: 8, gap: 15 },
 
-  /** The four pillars. Nothing can stand on them. */
-  pillars: [
-    { x: 332, y: 226, r: 21 },
-    { x: 668, y: 226, r: 21 },
-    { x: 332, y: 634, r: 21 },
-    { x: 668, y: 634, r: 21 },
-  ] satisfies Pillar[],
+  /** The stage sits between the two upper pillars and widens out to the wall behind. */
+  stage: {
+    label: "Scen",
+    points: "304,238 584,238 711,135 600,70 448,46 300,70 185,135",
+    labelX: 448,
+    labelY: 150,
+  },
 
-  /** Fixed things people orient by. */
-  features: [
-    {
-      label: "Scen",
-      /* Between the two upper pillars, widening out to the wall behind. */
-      points: "332,226 668,226 800,130 200,130",
-      labelX: 500,
-      labelY: 182,
-    },
-    {
-      label: "Bar",
-      /* A long counter running from the lower right pillar up towards the wall. */
-      points: "707,630 868,340 832,320 672,610",
-      labelX: 770,
-      labelY: 475,
-      rotate: -61,
-    },
-  ] satisfies Feature[],
+  /** A long counter from the lower right pillar up towards the wall. */
+  bar: {
+    label: "Bar",
+    points: "600,582 780,307 760,293 580,568",
+    labelX: 700,
+    labelY: 450,
+    rotate: -57,
+  },
 
-  /** Where you come in: bottom of the oval, middle. */
-  entrance: { x: 500, y: 850, label: "Ingång" },
-
-  /** Radius of a drawn table. */
-  tableRadius: 48,
+  /** Where you come in: bottom of the oval, in the middle. */
+  entrance: { x: 448, y: 736, label: "Ingång" },
 
   /**
-   * Fourteen tables of eight, 112 seats, for a party of 100 to 110.
-   * Four rows, keeping clear of the stage, the bar, the pillars and a
-   * walkway from the entrance. Placeholder until the real table plan
-   * is known.
+   * Twelve tables of eight, 96 seats. That is what fits to scale with
+   * 40 cm between chairs; a party of 110 needs longer tables or a
+   * smaller stage. Positions are a proposal until the real plan is known.
    */
   slots: [
-    { slot: 1, x: 220, y: 300, capacity: 8 },
-    { slot: 2, x: 390, y: 300, capacity: 8 },
-    { slot: 3, x: 610, y: 300, capacity: 8 },
-    { slot: 4, x: 760, y: 300, capacity: 8 },
-    { slot: 5, x: 110, y: 430, capacity: 8 },
-    { slot: 6, x: 280, y: 430, capacity: 8 },
-    { slot: 7, x: 450, y: 430, capacity: 8 },
-    { slot: 8, x: 620, y: 430, capacity: 8 },
-    { slot: 9, x: 160, y: 560, capacity: 8 },
-    { slot: 10, x: 400, y: 560, capacity: 8 },
-    { slot: 11, x: 560, y: 560, capacity: 8 },
-    { slot: 12, x: 240, y: 700, capacity: 8 },
-    { slot: 13, x: 420, y: 700, capacity: 8 },
-    { slot: 14, x: 600, y: 700, capacity: 8 },
+    { slot: 1, x: 152, y: 292, orientation: "h", capacity: 8 },
+    { slot: 2, x: 317, y: 292, orientation: "h", capacity: 8 },
+    { slot: 3, x: 482, y: 292, orientation: "h", capacity: 8 },
+    { slot: 4, x: 617, y: 332, orientation: "v", capacity: 8 },
+    { slot: 5, x: 122, y: 397, orientation: "h", capacity: 8 },
+    { slot: 6, x: 287, y: 397, orientation: "h", capacity: 8 },
+    { slot: 7, x: 452, y: 397, orientation: "h", capacity: 8 },
+    { slot: 8, x: 162, y: 502, orientation: "h", capacity: 8 },
+    { slot: 9, x: 327, y: 502, orientation: "h", capacity: 8 },
+    { slot: 10, x: 492, y: 502, orientation: "h", capacity: 8 },
+    { slot: 11, x: 330, y: 650, orientation: "h", capacity: 8 },
+    { slot: 12, x: 562, y: 650, orientation: "h", capacity: 8 },
   ] satisfies Slot[],
 };
 
 /** One colour per table, in slot order. Wraps around if the room grows. */
 export const PALETTE = [
-  "#E63946", // red
-  "#F4A261", // orange
-  "#E9C46A", // yellow
+  "#C8323E", // red
+  "#E08A3C", // orange
+  "#D4B24C", // yellow
   "#2A9D8F", // teal
-  "#457B9D", // steel blue
-  "#8E44AD", // purple
-  "#F28482", // salmon
-  "#84A59D", // sage
-  "#F5CAC3", // blush
-  "#3D5A80", // navy
-  "#B5838D", // mauve
-  "#6D9F71", // green
-  "#D98C3F", // amber
+  "#3F7CA6", // steel blue
+  "#7D4AA0", // purple
+  "#E2716E", // salmon
+  "#6F9A8A", // sage
+  "#C97B9A", // rose
+  "#2F4C6E", // navy
+  "#A0706A", // mauve
+  "#5E9A62", // green
+  "#B8742E", // amber
   "#5C7C9E", // slate
 ];
 

@@ -85,7 +85,7 @@ export default function App({
         </p>
       </header>
 
-      <section className="mt-5 overflow-hidden rounded-2xl border border-neutral-300 bg-white shadow-sm">
+      <section className="mt-5 overflow-hidden rounded-2xl border border-neutral-300 bg-[#dfe3ea] shadow-sm">
         <RoomMap tables={bySlot} selected={selectedSlot} onSelect={setSelectedSlot} />
       </section>
 
@@ -145,7 +145,10 @@ export default function App({
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className="truncate font-semibold">{t.name}</span>
+                    <span className="min-w-0 truncate font-semibold">
+                      <span className="mr-2 text-sm font-medium text-neutral-500">Bord {t.slot}</span>
+                      {t.name}
+                    </span>
                     <span className="shrink-0 text-sm text-neutral-600">
                       {t.guests.length}/{t.capacity}
                     </span>
@@ -165,6 +168,9 @@ export default function App({
 
 /* ---------- The drawing ---------- */
 
+const INK = "#3a3a44";
+const PLAN_FONT = "Georgia, 'Times New Roman', serif";
+
 function RoomMap({
   tables,
   selected,
@@ -174,141 +180,172 @@ function RoomMap({
   selected: number | null;
   onSelect: (slot: number) => void;
 }) {
-  const r = ROOM.tableRadius;
+  const { image, stage, bar, entrance } = ROOM;
   return (
     <svg
-      viewBox={`0 0 ${ROOM.width} ${ROOM.height}`}
+      viewBox={`0 0 ${image.width} ${image.height}`}
       className="block h-auto w-full"
       role="img"
       aria-label="Rummet med borden"
     >
-      {/* Floor and walls */}
-      <ellipse
-        cx={ROOM.oval.cx}
-        cy={ROOM.oval.cy}
-        rx={ROOM.oval.rx}
-        ry={ROOM.oval.ry}
-        fill="#f6efe4"
-        stroke="#1b1b1f"
-        strokeWidth={8}
-      />
-
-      {/* Stage, bar */}
-      {ROOM.features.map((f) => (
-        <g key={f.label}>
-          <polygon points={f.points} fill="#e4dbcc" stroke="#7a7268" strokeWidth={3} />
-          <text
-            x={f.labelX}
-            y={f.labelY}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={26}
-            fontWeight={600}
-            fill="#5b544b"
-            transform={f.rotate ? `rotate(${f.rotate} ${f.labelX} ${f.labelY})` : undefined}
-          >
-            {f.label}
-          </text>
-        </g>
-      ))}
-
-      {/* Pillars */}
-      {ROOM.pillars.map((p) => (
-        <circle key={`${p.x},${p.y}`} cx={p.x} cy={p.y} r={p.r} fill="#a89f92" stroke="#5b544b" strokeWidth={3} />
-      ))}
-
-      {/* Entrance: a gap in the wall and an arrow pointing in */}
-      <g>
-        <line
-          x1={ROOM.entrance.x - 50}
-          y1={ROOM.entrance.y}
-          x2={ROOM.entrance.x + 50}
-          y2={ROOM.entrance.y}
-          stroke="#f6efe4"
-          strokeWidth={12}
-        />
-        <line
-          x1={ROOM.entrance.x}
-          y1={ROOM.entrance.y + 40}
-          x2={ROOM.entrance.x}
-          y2={ROOM.entrance.y - 30}
-          stroke="#5b544b"
-          strokeWidth={5}
-          markerEnd="url(#arrow)"
-        />
-        <text
-          x={ROOM.entrance.x}
-          y={ROOM.entrance.y + 25}
-          textAnchor="start"
-          dominantBaseline="central"
-          fontSize={24}
-          fontWeight={600}
-          fill="#5b544b"
-          dx={14}
-        >
-          {ROOM.entrance.label}
-        </text>
-      </g>
       <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b544b" />
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill={INK} />
         </marker>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" floodColor="#000" floodOpacity="0.35" />
+        </filter>
       </defs>
 
+      {/* The 1925 plan */}
+      <image href={image.src} x={0} y={0} width={image.width} height={image.height} />
+
+      {/* Stage */}
+      <polygon points={stage.points} fill="rgba(58,58,68,0.10)" stroke={INK} strokeWidth={3} strokeLinejoin="round" />
+      <PlanLabel x={stage.labelX} y={stage.labelY}>
+        {stage.label}
+      </PlanLabel>
+
+      {/* Bar */}
+      <polygon points={bar.points} fill="rgba(58,58,68,0.10)" stroke={INK} strokeWidth={3} strokeLinejoin="round" />
+      <PlanLabel x={bar.labelX} y={bar.labelY} rotate={bar.rotate}>
+        {bar.label}
+      </PlanLabel>
+
+      {/* Entrance */}
+      <line
+        x1={entrance.x}
+        y1={entrance.y + 38}
+        x2={entrance.x}
+        y2={entrance.y - 30}
+        stroke={INK}
+        strokeWidth={4}
+        markerEnd="url(#arrow)"
+      />
+      <PlanLabel x={entrance.x + 14} y={entrance.y + 24} anchor="start">
+        {entrance.label}
+      </PlanLabel>
+
       {/* Tables */}
-      {ROOM.slots.map((s) => {
-        const t = tables.get(s.slot);
-        const isSelected = selected === s.slot;
-        const fill = t ? slotColor(s.slot) : "#ffffff";
-        const ink = t ? textOn(fill) : "#8a8378";
-        return (
-          <g
-            key={s.slot}
-            onClick={() => onSelect(s.slot)}
-            style={{ cursor: "pointer" }}
-            role="button"
-            aria-label={t ? `${t.name}, ${t.guests.length} av ${t.capacity}` : `Ledigt bord ${s.slot}`}
-          >
-            <circle
-              cx={s.x}
-              cy={s.y}
-              r={r}
-              fill={fill}
-              stroke={isSelected ? "#1b1b1f" : t ? "rgba(0,0,0,0.25)" : "#b8b0a4"}
-              strokeWidth={isSelected ? 8 : 3}
-              strokeDasharray={t ? undefined : "10 8"}
-            />
-            <text
-              x={s.x}
-              y={s.y - 9}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize={16}
-              fontWeight={700}
-              fill={ink}
-            >
-              {t ? shorten(t.name, 9) : "Ledigt"}
-            </text>
-            <text
-              x={s.x}
-              y={s.y + 12}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize={16}
-              fill={ink}
-              opacity={0.85}
-            >
-              {t ? `${t.guests.length}/${t.capacity}` : `Bord ${s.slot}`}
-            </text>
-          </g>
-        );
-      })}
+      {ROOM.slots.map((s) => (
+        <TableMark
+          key={s.slot}
+          slot={s}
+          table={tables.get(s.slot)}
+          selected={selected === s.slot}
+          onSelect={() => onSelect(s.slot)}
+        />
+      ))}
     </svg>
   );
 }
 
-function shorten(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+/* Lettering in the spirit of the plan: serif capitals, spaced out. */
+function PlanLabel({
+  x,
+  y,
+  rotate,
+  anchor = "middle",
+  children,
+}: {
+  x: number;
+  y: number;
+  rotate?: number;
+  anchor?: "start" | "middle";
+  children: string;
+}) {
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={anchor}
+      dominantBaseline="central"
+      fontFamily={PLAN_FONT}
+      fontSize={22}
+      letterSpacing={3}
+      fill={INK}
+      transform={rotate ? `rotate(${rotate} ${x} ${y})` : undefined}
+    >
+      {children.toUpperCase()}
+    </text>
+  );
+}
+
+/* One table with its eight chairs, drawn to scale. */
+function TableMark({
+  slot,
+  table,
+  selected,
+  onSelect,
+}: {
+  slot: Slot;
+  table: Table | undefined;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { w, h } = ROOM.tableTop;
+  const { r, gap } = ROOM.chair;
+  const fill = table ? slotColor(slot.slot) : "#fbf8f2";
+  const ink = table ? textOn(fill) : "#6b6b76";
+  const chairFill = table ? fill : "#e6e0d6";
+  const rotate = slot.orientation === "v" ? -90 : 0;
+
+  /* Three chairs along each long side, one at each end. */
+  const chairs: [number, number][] = [
+    ...[-w / 3, 0, w / 3].flatMap((cx): [number, number][] => [
+      [cx, -h / 2 - gap],
+      [cx, h / 2 + gap],
+    ]),
+    [-w / 2 - gap, 0],
+    [w / 2 + gap, 0],
+  ];
+  const hitW = w + 2 * (gap + r);
+  const hitH = h + 2 * (gap + r);
+
+  return (
+    <g
+      transform={`translate(${slot.x} ${slot.y}) rotate(${rotate})`}
+      onClick={onSelect}
+      style={{ cursor: "pointer" }}
+      role="button"
+      aria-label={table ? `${table.name}, ${table.guests.length} av ${table.capacity}` : `Ledigt bord ${slot.slot}`}
+    >
+      <rect x={-hitW / 2} y={-hitH / 2} width={hitW} height={hitH} fill="transparent" />
+      {chairs.map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={r} fill={chairFill} stroke={table ? "#ffffff" : "#9a948a"} strokeWidth={1.5} opacity={table ? 0.9 : 1} />
+      ))}
+      <rect
+        x={-w / 2}
+        y={-h / 2}
+        width={w}
+        height={h}
+        rx={4}
+        fill={fill}
+        stroke={selected ? "#1b1b1f" : "#ffffff"}
+        strokeWidth={selected ? 4 : 2}
+        strokeDasharray={table ? undefined : "5 4"}
+        filter={table ? "url(#shadow)" : undefined}
+      />
+      {/* Just the number: to scale, a table is too small on a phone for a
+          name. The list below says which number is which group. */}
+      <text
+        x={table ? -14 : 0}
+        y={0}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={22}
+        fontWeight={700}
+        fill={ink}
+      >
+        {slot.slot}
+      </text>
+      {table && (
+        <text x={16} y={1} textAnchor="middle" dominantBaseline="central" fontSize={13} fontWeight={600} fill={ink} opacity={0.9}>
+          {table.guests.length}/{table.capacity}
+        </text>
+      )}
+    </g>
+  );
 }
 
 /* ---------- Start a table on a free spot ---------- */
