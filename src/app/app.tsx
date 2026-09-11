@@ -183,35 +183,77 @@ function RoomMap({
       aria-label="Rummet med borden"
     >
       {/* Floor and walls */}
-      <polygon points={ROOM.outline} fill="#f6efe4" stroke="#1b1b1f" strokeWidth={6} />
+      <ellipse
+        cx={ROOM.oval.cx}
+        cy={ROOM.oval.cy}
+        rx={ROOM.oval.rx}
+        ry={ROOM.oval.ry}
+        fill="#f6efe4"
+        stroke="#1b1b1f"
+        strokeWidth={8}
+      />
 
-      {/* Stage, bar, entrance */}
+      {/* Stage, bar */}
       {ROOM.features.map((f) => (
         <g key={f.label}>
-          <rect
-            x={f.x}
-            y={f.y}
-            width={f.w}
-            height={f.h}
-            rx={8}
-            fill="#e4dbcc"
-            stroke="#7a7268"
-            strokeWidth={3}
-          />
+          <polygon points={f.points} fill="#e4dbcc" stroke="#7a7268" strokeWidth={3} />
           <text
-            x={f.x + f.w / 2}
-            y={f.y + f.h / 2}
+            x={f.labelX}
+            y={f.labelY}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={f.w < 80 ? 22 : 26}
+            fontSize={26}
             fontWeight={600}
             fill="#5b544b"
-            transform={f.w < f.h ? `rotate(-90 ${f.x + f.w / 2} ${f.y + f.h / 2})` : undefined}
+            transform={f.rotate ? `rotate(${f.rotate} ${f.labelX} ${f.labelY})` : undefined}
           >
             {f.label}
           </text>
         </g>
       ))}
+
+      {/* Pillars */}
+      {ROOM.pillars.map((p) => (
+        <circle key={`${p.x},${p.y}`} cx={p.x} cy={p.y} r={p.r} fill="#a89f92" stroke="#5b544b" strokeWidth={3} />
+      ))}
+
+      {/* Entrance: a gap in the wall and an arrow pointing in */}
+      <g>
+        <line
+          x1={ROOM.entrance.x - 50}
+          y1={ROOM.entrance.y}
+          x2={ROOM.entrance.x + 50}
+          y2={ROOM.entrance.y}
+          stroke="#f6efe4"
+          strokeWidth={12}
+        />
+        <line
+          x1={ROOM.entrance.x}
+          y1={ROOM.entrance.y + 40}
+          x2={ROOM.entrance.x}
+          y2={ROOM.entrance.y - 30}
+          stroke="#5b544b"
+          strokeWidth={5}
+          markerEnd="url(#arrow)"
+        />
+        <text
+          x={ROOM.entrance.x}
+          y={ROOM.entrance.y + 25}
+          textAnchor="start"
+          dominantBaseline="central"
+          fontSize={24}
+          fontWeight={600}
+          fill="#5b544b"
+          dx={14}
+        >
+          {ROOM.entrance.label}
+        </text>
+      </g>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b544b" />
+        </marker>
+      </defs>
 
       {/* Tables */}
       {ROOM.slots.map((s) => {
@@ -238,21 +280,21 @@ function RoomMap({
             />
             <text
               x={s.x}
-              y={s.y - 8}
+              y={s.y - 9}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize={18}
+              fontSize={16}
               fontWeight={700}
               fill={ink}
             >
-              {t ? shorten(t.name, 11) : "Ledigt"}
+              {t ? shorten(t.name, 9) : "Ledigt"}
             </text>
             <text
               x={s.x}
-              y={s.y + 20}
+              y={s.y + 12}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize={18}
+              fontSize={16}
               fill={ink}
               opacity={0.85}
             >

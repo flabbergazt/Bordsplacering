@@ -2,11 +2,14 @@
  * The room, as a drawing.
  *
  * Everything about how the room looks lives here: the walls, the fixed
- * things in it (stage, bar, entrance) and where the tables stand. Change
- * this file to redraw the room; nothing else needs to know.
+ * things in it (stage, bar, pillars, entrance) and where the tables stand,
+ * how many fit at each, the colours. Change this file to redraw the room;
+ * nothing else needs to know.
  *
- * Coordinates are in an abstract unit; the drawing scales to the screen.
- * (0, 0) is the top left corner.
+ * The room is the oval "Museum" hall at Handelshögskolan, measured off the
+ * 1925 plan: about 16.5 m wide and 14 m deep, four pillars inside. One
+ * metre is 60 units here, so the drawing is roughly to scale. (0, 0) is the
+ * top left corner; the stage is at the top, the entrance at the bottom.
  */
 
 export type Slot = {
@@ -20,43 +23,77 @@ export type Slot = {
 
 export type Feature = {
   label: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  /** SVG polygon points. */
+  points: string;
+  labelX: number;
+  labelY: number;
+  /** Degrees, for a label along a slanted thing like the bar. */
+  rotate?: number;
 };
+
+export type Pillar = { x: number; y: number; r: number };
 
 export const ROOM = {
   width: 1000,
-  height: 640,
+  height: 900,
 
-  /** The walls, as SVG polygon points. A plain rectangle until we know better. */
-  outline: "0,0 1000,0 1000,640 0,640",
+  /** The walls: an oval. */
+  oval: { cx: 500, cy: 430, rx: 495, ry: 420 },
+
+  /** The four pillars. Nothing can stand on them. */
+  pillars: [
+    { x: 332, y: 226, r: 21 },
+    { x: 668, y: 226, r: 21 },
+    { x: 332, y: 634, r: 21 },
+    { x: 668, y: 634, r: 21 },
+  ] satisfies Pillar[],
 
   /** Fixed things people orient by. */
   features: [
-    { label: "Scen", x: 330, y: 16, w: 340, h: 60 },
-    { label: "Bar", x: 16, y: 480, w: 60, h: 144 },
-    { label: "Entré", x: 860, y: 600, w: 124, h: 40 },
+    {
+      label: "Scen",
+      /* Between the two upper pillars, widening out to the wall behind. */
+      points: "332,226 668,226 800,130 200,130",
+      labelX: 500,
+      labelY: 182,
+    },
+    {
+      label: "Bar",
+      /* A long counter running from the lower right pillar up towards the wall. */
+      points: "707,630 868,340 832,320 672,610",
+      labelX: 770,
+      labelY: 475,
+      rotate: -61,
+    },
   ] satisfies Feature[],
 
-  /** Radius of a drawn table. */
-  tableRadius: 56,
+  /** Where you come in: bottom of the oval, middle. */
+  entrance: { x: 500, y: 850, label: "Ingång" },
 
-  /** Twelve round tables in three rows of four. */
+  /** Radius of a drawn table. */
+  tableRadius: 48,
+
+  /**
+   * Fourteen tables of eight, 112 seats, for a party of 100 to 110.
+   * Four rows, keeping clear of the stage, the bar, the pillars and a
+   * walkway from the entrance. Placeholder until the real table plan
+   * is known.
+   */
   slots: [
-    { slot: 1, x: 200, y: 190, capacity: 8 },
-    { slot: 2, x: 400, y: 190, capacity: 8 },
-    { slot: 3, x: 600, y: 190, capacity: 8 },
-    { slot: 4, x: 800, y: 190, capacity: 8 },
-    { slot: 5, x: 200, y: 340, capacity: 8 },
-    { slot: 6, x: 400, y: 340, capacity: 8 },
-    { slot: 7, x: 600, y: 340, capacity: 8 },
-    { slot: 8, x: 800, y: 340, capacity: 8 },
-    { slot: 9, x: 200, y: 490, capacity: 8 },
-    { slot: 10, x: 400, y: 490, capacity: 8 },
-    { slot: 11, x: 600, y: 490, capacity: 8 },
-    { slot: 12, x: 800, y: 490, capacity: 8 },
+    { slot: 1, x: 220, y: 300, capacity: 8 },
+    { slot: 2, x: 390, y: 300, capacity: 8 },
+    { slot: 3, x: 610, y: 300, capacity: 8 },
+    { slot: 4, x: 760, y: 300, capacity: 8 },
+    { slot: 5, x: 110, y: 430, capacity: 8 },
+    { slot: 6, x: 280, y: 430, capacity: 8 },
+    { slot: 7, x: 450, y: 430, capacity: 8 },
+    { slot: 8, x: 620, y: 430, capacity: 8 },
+    { slot: 9, x: 160, y: 560, capacity: 8 },
+    { slot: 10, x: 400, y: 560, capacity: 8 },
+    { slot: 11, x: 560, y: 560, capacity: 8 },
+    { slot: 12, x: 240, y: 700, capacity: 8 },
+    { slot: 13, x: 420, y: 700, capacity: 8 },
+    { slot: 14, x: 600, y: 700, capacity: 8 },
   ] satisfies Slot[],
 };
 
@@ -74,6 +111,8 @@ export const PALETTE = [
   "#3D5A80", // navy
   "#B5838D", // mauve
   "#6D9F71", // green
+  "#D98C3F", // amber
+  "#5C7C9E", // slate
 ];
 
 export function slotColor(slot: number): string {
