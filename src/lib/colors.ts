@@ -1,23 +1,23 @@
 /*
- * One colour per group, in slot order. Wraps around if there are more
- * groups than colours.
+ * One colour per group, in slot order. Chosen to sit next to SASSE purple,
+ * so no purple here. Wraps around if there are more groups than colours.
  */
 
 export const PALETTE = [
-  "#C8323E", // red
-  "#E08A3C", // orange
-  "#D4B24C", // yellow
-  "#2A9D8F", // teal
-  "#3F7CA6", // steel blue
-  "#7D4AA0", // purple
-  "#E2716E", // salmon
-  "#6F9A8A", // sage
-  "#C97B9A", // rose
-  "#2F4C6E", // navy
-  "#A0706A", // mauve
-  "#5E9A62", // green
-  "#B8742E", // amber
+  "#C2185B", // magenta
+  "#D9A421", // gold
+  "#159A8E", // teal
+  "#E8604C", // coral
+  "#1F3A93", // navy
+  "#4C9A2A", // green
+  "#2E86C1", // sky
+  "#E57FA3", // rose
+  "#E28D2B", // amber
+  "#36B37E", // mint
+  "#8E2043", // burgundy
   "#5C7C9E", // slate
+  "#B5651D", // copper
+  "#3C8D8A", // pine
 ];
 
 export function slotColor(slot: number): string {

@@ -94,13 +94,19 @@ export default function App({
   }
 
   return (
-    <main className="pb-16 pt-6">
-      <header className="mx-auto max-w-xl px-4">
-        <p className="text-sm font-medium uppercase tracking-widest text-neutral-500">Class of 2006</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">20th Alumni Reunion 2026</h1>
-        <p className="mt-3 text-neutral-600">
-          Vilka vill du sitta med? Bläddra bland grupperna. Gå med i en, eller starta en egen på ett ledigt kort.
-        </p>
+    <main className="pb-16">
+      {/* The purple band and the white box on it are the two things
+          everyone recognises from sasse.se. */}
+      <header className="bg-purple px-4 pb-8 pt-8 text-white">
+        <div className="mx-auto max-w-xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Class of 2006</p>
+          <h1 className="mt-3 inline-block bg-white px-3 py-1 text-2xl font-bold uppercase leading-tight tracking-tight text-purple sm:text-3xl">
+            20th Alumni Reunion 2026
+          </h1>
+          <p className="mt-4 max-w-md text-white/90">
+            Vilka vill du sitta med? Bläddra bland grupperna, gå med i en eller starta en egen på ett ledigt kort.
+          </p>
+        </div>
       </header>
 
       {/* Full viewport width, so the cards to the side show on a desktop too. */}
@@ -134,11 +140,11 @@ export default function App({
       </section>
 
       {loadError && (
-        <p className="mx-auto mt-4 max-w-xl rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{loadError}</p>
+        <p className="mx-auto mt-4 max-w-xl rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">{loadError}</p>
       )}
 
       {loaded && active && (
-        <section id="panel" className="mx-4 mt-5 scroll-mt-4 rounded-2xl border border-neutral-300 bg-white p-4 shadow-sm sm:mx-auto sm:max-w-xl">
+        <section id="panel" className="mx-4 mt-5 scroll-mt-4 rounded-3xl border border-purple/15 bg-white p-5 shadow-sm sm:mx-auto sm:max-w-xl">
           {active.table ? (
             <JoinPanel key={active.table.id} db={db} table={active.table} onDone={refresh} />
           ) : (
@@ -149,7 +155,7 @@ export default function App({
 
       <section className="mx-auto mt-8 max-w-xl px-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold">Alla grupper</h2>
+          <h2 className="text-xl font-bold text-purple">Alla grupper</h2>
           <span className="text-sm text-neutral-600">
             {loaded ? `${seated} anmälda` : "Laddar…"}
           </span>
@@ -169,7 +175,7 @@ export default function App({
                 <button
                   type="button"
                   onClick={() => goTo(t.slot)}
-                  className="flex w-full items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4 text-left shadow-sm active:bg-neutral-50"
+                  className="flex w-full items-start gap-3 rounded-3xl border border-purple/15 bg-white p-4 text-left shadow-sm active:bg-purple-soft"
                 >
                   <span
                     className="mt-1 inline-block h-4 w-4 shrink-0 rounded-full"
@@ -201,9 +207,9 @@ function GroupCard({ card }: { card: Card }) {
   if (!table) {
     /* A placeholder: quiet, waiting to be taken. */
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-neutral-300 bg-neutral-100/70 px-5 text-center text-neutral-500">
-        <span className="text-2xl font-light leading-tight">{card.suggestion ?? "Ny grupp"}</span>
-        <span className="mt-6 flex h-12 w-12 items-center justify-center rounded-full border-2 border-neutral-300 text-2xl font-light">
+      <div className="flex h-full w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-purple/30 bg-white/70 px-5 text-center text-purple/70">
+        <span className="text-2xl font-medium leading-tight">{card.suggestion ?? "Ny grupp"}</span>
+        <span className="mt-6 flex h-12 w-12 items-center justify-center rounded-full border-2 border-purple/30 text-2xl font-light">
           +
         </span>
         <span className="mt-3 text-sm">Starta gruppen här</span>
@@ -302,7 +308,7 @@ function CreatePanel({
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-xl bg-neutral-900 px-4 py-3 font-semibold text-white disabled:opacity-50"
+        className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
       >
         {busy ? "Startar…" : "Starta gruppen"}
       </button>
@@ -397,7 +403,7 @@ function JoinPanel({
       </p>
       <ul className="flex flex-wrap gap-2">
         {table.guests.map((g) => (
-          <li key={g.id} className="rounded-full bg-neutral-100 px-3 py-1 text-sm">
+          <li key={g.id} className="rounded-full bg-purple-soft px-3 py-1 text-sm text-purple-deep">
             {g.name}
           </li>
         ))}
@@ -410,14 +416,14 @@ function JoinPanel({
       {mode === "join" && (
         <form onSubmit={submitJoin} className="space-y-3 border-t border-neutral-200 pt-3">
           <p className="font-medium">Vill du vara med? Svara på gruppens fråga.</p>
-          <p className="rounded-xl bg-neutral-100 px-4 py-3">{table.question}</p>
+          <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">{table.question}</p>
           <Field label="Ditt svar" value={answer} onChange={setAnswer} />
           <Field label="Ditt namn" value={name} onChange={setName} placeholder="För- och efternamn" />
           {error && <p className="text-sm text-red-700">{error}</p>}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-xl bg-neutral-900 px-4 py-3 font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
           >
             {busy ? "Lägger till…" : "Gå med"}
           </button>
@@ -431,14 +437,14 @@ function JoinPanel({
       {mode === "rename" && (
         <form onSubmit={submitRename} className="space-y-3 border-t border-neutral-200 pt-3">
           <p className="font-medium">Byt namn. Bara den som kan svaret får göra det.</p>
-          <p className="rounded-xl bg-neutral-100 px-4 py-3">{table.question}</p>
+          <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">{table.question}</p>
           <Field label="Svaret" value={answer} onChange={setAnswer} />
           <Field label="Nytt namn" value={newName} onChange={setNewName} />
           {error && <p className="text-sm text-red-700">{error}</p>}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-xl bg-neutral-900 px-4 py-3 font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
           >
             {busy ? "Sparar…" : "Spara namnet"}
           </button>
@@ -451,14 +457,14 @@ function JoinPanel({
       {mode === "leave" && (
         <form onSubmit={submitLeave} className="space-y-3 border-t border-neutral-200 pt-3">
           <p className="font-medium">Ta bort ett namn. Bara den som kan svaret får göra det.</p>
-          <p className="rounded-xl bg-neutral-100 px-4 py-3">{table.question}</p>
+          <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">{table.question}</p>
           <Field label="Svaret" value={answer} onChange={setAnswer} />
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Vem ska bort?</span>
             <select
               value={leaving}
               onChange={(e) => setLeaving(e.target.value)}
-              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base"
+              className="w-full rounded-2xl border border-purple/25 bg-white px-4 py-3 text-base"
             >
               {table.guests.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -471,7 +477,7 @@ function JoinPanel({
           <button
             type="submit"
             disabled={busy || !leaving}
-            className="w-full rounded-xl bg-red-700 px-4 py-3 font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-full border-2 border-red-700 bg-white px-4 py-3 font-semibold text-red-700 active:bg-red-50 disabled:opacity-50"
           >
             {busy ? "Tar bort…" : "Ta bort från gruppen"}
           </button>
@@ -491,7 +497,7 @@ function LinkButton({ onClick, children }: { onClick: () => void; children: stri
     <button
       type="button"
       onClick={onClick}
-      className="py-2 text-sm text-neutral-600 underline-offset-2 hover:underline"
+      className="py-2 text-sm font-medium text-purple underline-offset-2 hover:underline"
     >
       {children}
     </button>
@@ -502,7 +508,7 @@ function PanelHeader({ title, color }: { title: string; color: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="inline-block h-5 w-5 shrink-0 rounded-full" style={{ background: color }} />
-      <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h2>
+      <h2 className="min-w-0 flex-1 truncate text-lg font-bold">{title}</h2>
     </div>
   );
 }
@@ -528,7 +534,7 @@ function Field({
         placeholder={placeholder}
         required
         autoComplete="off"
-        className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base"
+        className="w-full rounded-2xl border border-purple/25 bg-white px-4 py-3 text-base"
       />
     </label>
   );

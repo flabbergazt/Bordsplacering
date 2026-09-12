@@ -32,6 +32,10 @@ what is knowingly broken.
   `SUPABASE_ANON_KEY` at request time and hands them to `src/app/app.tsx`,
   which is the whole UI. Plain names on purpose: Vercel refuses to store a
   `NEXT_PUBLIC_` variable as Secret.
+- The look is borrowed from sasse.se: deep purple, white box behind the
+  title, Outfit (a free stand-in for their Century Gothic-like face), pill
+  buttons. Colour tokens live in `src/app/globals.css`, the card palette in
+  `src/lib/colors.ts` and has no purple on purpose.
 - The carousel is Swiper with the coverflow effect, `depth: 0` on purpose:
   slides pushed back in 3D stop receiving taps in Chrome.
 

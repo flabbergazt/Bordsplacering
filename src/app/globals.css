@@ -1,16 +1,30 @@
 @import "tailwindcss";
 
-/* One warm, light look. The page is read on a phone in a hand, not in a tab. */
+/*
+ * Borrowed from sasse.se: deep purple, white on purple, a round geometric
+ * face, pill-shaped buttons. The page itself stays light so the group
+ * cards keep their colours.
+ */
+@theme {
+  --color-purple: #4b1b54;
+  --color-purple-deep: #35113c;
+  --color-purple-soft: #ede3f0;
+  --color-ink: #1f1226;
+  --color-paper: #faf7fb;
+  --font-sans: var(--font-outfit), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 html,
 body {
-  background: #fbf7f1;
-  color: #1b1b1f;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }
 
 button:focus-visible,
-input:focus-visible {
-  outline: 2px solid #1b1b1f;
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-purple);
   outline-offset: 2px;
 }
 
