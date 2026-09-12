@@ -17,9 +17,9 @@ export const SUGGESTIONS = [
   "IdU",
   "Kårstyrelsen",
   "PU",
+  "Längst fram till vänster i Aulan",
   "IntU",
   "ITU",
-  "Längst fram till vänster i Aulan",
 ];
 
 /** Blank cards to show after the suggestions. */
