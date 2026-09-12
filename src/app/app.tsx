@@ -104,7 +104,7 @@ export default function App({
           </h1>
           <p className="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Class of 2006</p>
           <p className="mt-4 max-w-md text-white/90">
-            Vilka vill du sitta med på middagen? Bläddra, gå med i en grupp eller starta en egen grupp på ett ledigt kort.
+            Vilka vill du sitta med på middagen? Bläddra, kolla var dina kompisar sitter, gå med i en grupp eller starta en egen grupp på ett ledigt kort.
           </p>
         </div>
       </header>
