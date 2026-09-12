@@ -99,12 +99,12 @@ export default function App({
           everyone recognises from sasse.se. */}
       <header className="bg-purple px-4 pb-8 pt-8 text-white">
         <div className="mx-auto max-w-xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Class of 2006</p>
-          <h1 className="mt-3 inline-block bg-white px-3 py-1 text-2xl font-bold uppercase leading-tight tracking-tight text-purple sm:text-3xl">
+          <h1 className="inline-block bg-white px-3 py-1 text-2xl font-bold uppercase leading-tight tracking-tight text-purple sm:text-3xl">
             20th Alumni Reunion 2026
           </h1>
+          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Class of 2006</p>
           <p className="mt-4 max-w-md text-white/90">
-            Vilka vill du sitta med? Bläddra bland grupperna, gå med i en eller starta en egen på ett ledigt kort.
+            Vilka vill du sitta med vid bordet? Bläddra, gå med i en grupp eller starta en egen på ett ledigt kort.
           </p>
         </div>
       </header>
