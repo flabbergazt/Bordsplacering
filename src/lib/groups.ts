@@ -19,6 +19,7 @@ export const SUGGESTIONS = [
   "PU",
   "Längst fram till vänster i Aulan",
   "IntU",
+  "Red & Fin Master",
   "ITU",
 ];
 
