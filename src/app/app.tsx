@@ -88,7 +88,7 @@ export default function App({
 
   function goTo(slot: number) {
     const i = cards.findIndex((c) => c.slot === slot);
-    if (i >= 0) swiper?.slideTo(i);
+    if (i >= 0) swiper?.slideToLoop(i);
     setActiveSlot(slot);
     document.getElementById("panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -117,18 +117,19 @@ export default function App({
             effect="coverflow"
             grabCursor
             centeredSlides
+            loop
             slidesPerView="auto"
             slideToClickedSlide
             initialSlide={activeIndex}
             coverflowEffect={{ rotate: 0, stretch: -28, depth: 0, scale: 0.86, modifier: 1, slideShadows: false }}
             onSwiper={setSwiper}
-            onSlideChange={(s) => setActiveSlot(cards[s.activeIndex]?.slot ?? null)}
+            onSlideChange={(s) => setActiveSlot(cards[s.realIndex]?.slot ?? null)}
             className="group-swiper"
           >
             {cards.map((c, i) => (
               <SwiperSlide key={c.slot} className="group-slide">
                 {/* A tap on a card to the side brings it to the middle. */}
-                <div className="h-full w-full" onClick={() => swiper?.slideTo(i)}>
+                <div className="h-full w-full" onClick={() => swiper?.slideToLoop(i)}>
                   <GroupCard card={c} />
                 </div>
               </SwiperSlide>
