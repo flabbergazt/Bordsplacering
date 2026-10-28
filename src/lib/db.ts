@@ -78,7 +78,13 @@ export async function leaveTable(db: SupabaseClient, input: {
 
 /** The database answers with short codes; this is what people read. */
 export function describeError(err: unknown): string {
-  const code = err instanceof Error ? err.message : String(err);
+  /* Supabase errors are plain objects with a message, not Error instances. */
+  const code =
+    err instanceof Error
+      ? err.message
+      : typeof err === "object" && err && "message" in err
+        ? String((err as { message: unknown }).message)
+        : String(err);
   const known: Record<string, string> = {
     already_seated: "Det namnet är redan med i den här gruppen.",
     table_full: "Gruppen är full.",
