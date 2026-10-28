@@ -1,6 +1,6 @@
 # NOTES
 
-- State: SASSE theme applied (purple band, white title box, Outfit font, pill buttons, palette without purple). Iteration 2 built: groups as a coverflow carousel (Swiper), suggested placeholder names on free cards, rename a group and remove a member with the answer. Carousel spans the full viewport so side cards show on desktop. Verified with mocked data; not yet on Max's phones.
-- Next: Max runs supabase/schema.sql again (adds rename_table and leave_table), tests on two phones. Then iteration 3: warn when the same name is in several groups, live updates.
+- State: simplified model live in code: no security question, names hidden from the API (counts via group_counts view), cap 10 per group with "Fullt", join and leave by name, rename removed. Carousel loops. SASSE theme. Verified with mocked data; Max has not run the new schema yet.
+- Next: Max runs supabase/schema.sql again (drops question/answers, adds the view and new functions), deletes test data, tests on two phones. Then: live updates without reload.
 - Setup: Supabase project with schema.sql; Vercel with SUPABASE_URL and SUPABASE_ANON_KEY as Secret; deploys on push to main.
-- Known: no live updates (reload or return to the tab). Cap of 30 per group, effectively none.
+- Known: no live updates (reload or return to the tab). The intro still says "kolla var dina kompisar sitter" although names are hidden; Max to decide the wording.

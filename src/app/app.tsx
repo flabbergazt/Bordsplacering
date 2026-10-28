@@ -17,7 +17,7 @@ import "swiper/css";
 import "swiper/css/effect-coverflow";
 
 import { makeClient } from "@/lib/supabase";
-import { createTable, describeError, joinTable, leaveTable, loadTables, renameTable, type Table } from "@/lib/db";
+import { createTable, describeError, joinTable, leaveTable, loadTables, type Table } from "@/lib/db";
 import { darken, slotColor } from "@/lib/colors";
 import { buildCards, GROUP_CAPACITY, type Card } from "@/lib/groups";
 
@@ -84,7 +84,7 @@ export default function App({
     cards.findIndex((c) => c.slot === activeSlot)
   );
   const active: Card | undefined = cards[activeIndex];
-  const seated = tables.reduce((n, t) => n + t.guests.length, 0);
+  const seated = tables.reduce((n, t) => n + t.members, 0);
 
   function goTo(slot: number) {
     const i = cards.findIndex((c) => c.slot === slot);
@@ -185,10 +185,7 @@ export default function App({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-3">
                       <span className="min-w-0 truncate font-semibold">{t.name}</span>
-                      <span className="shrink-0 text-sm text-neutral-600">{t.guests.length} st</span>
-                    </span>
-                    <span className="mt-1 block text-sm text-neutral-700">
-                      {t.guests.map((g) => g.name).join(", ")}
+                      <span className="shrink-0 text-sm text-neutral-600">{countLabel(t)}</span>
                     </span>
                   </span>
                 </button>
@@ -219,9 +216,7 @@ function GroupCard({ card }: { card: Card }) {
   }
 
   const color = slotColor(slot);
-  const names = table.guests.map((g) => g.name);
-  const shown = names.slice(0, 4);
-  const more = names.length - shown.length;
+  const full = table.members >= table.capacity;
 
   return (
     <div
@@ -235,17 +230,22 @@ function GroupCard({ card }: { card: Card }) {
         </h3>
       </div>
       <div>
-        <p className="text-sm leading-snug opacity-90">
-          {shown.join(", ")}
-          {more > 0 ? ` och ${more} till` : ""}
-        </p>
+        {full ? (
+          <p className="inline-block rounded-full bg-white/20 px-3 py-1 text-sm font-semibold uppercase tracking-widest">
+            Fullt
+          </p>
+        ) : null}
         <p className="mt-3 text-3xl font-semibold">
-          {names.length}
-          <span className="ml-1 text-base font-normal opacity-80">{names.length === 1 ? "person" : "personer"}</span>
+          {table.members}
+          <span className="ml-1 text-base font-normal opacity-80">av {table.capacity} anmälda</span>
         </p>
       </div>
     </div>
   );
+}
+
+function countLabel(t: Table): string {
+  return t.members >= t.capacity ? `Fullt · ${t.members}/${t.capacity}` : `${t.members}/${t.capacity}`;
 }
 
 /* ---------- Start a group on a free card ---------- */
@@ -263,8 +263,6 @@ function CreatePanel({
 }) {
   const [tableName, setTableName] = useState(suggestion ?? "");
   const [creator, setCreator] = useState("");
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -277,8 +275,6 @@ function CreatePanel({
         slot,
         name: tableName,
         creator,
-        question,
-        answer,
         capacity: GROUP_CAPACITY,
       });
       await onDone();
@@ -293,18 +289,11 @@ function CreatePanel({
     <form onSubmit={submit} className="space-y-3">
       <PanelHeader title={suggestion ? `Starta ${suggestion}` : "Starta en ny grupp"} color="#d4d4d8" />
       <p className="text-sm text-neutral-600">
-        Du blir första medlem. Alla som vill vara med måste svara rätt på din fråga.
+        Du blir första anmäld. Plats för {GROUP_CAPACITY} personer.
         {suggestion ? " Namnet är ett förslag, byt om du vill." : ""}
       </p>
       <Field label="Gruppens namn" value={tableName} onChange={setTableName} placeholder="t.ex. Gänget från Lund" />
       <Field label="Ditt namn" value={creator} onChange={setCreator} placeholder="För- och efternamn" />
-      <Field
-        label="Säkerhetsfråga som alla i gruppen kan svara på"
-        value={question}
-        onChange={setQuestion}
-        placeholder="t.ex. Vad heter vår katt?"
-      />
-      <Field label="Rätt svar" value={answer} onChange={setAnswer} placeholder="Svaret, t.ex. Misse" />
       {error && <p className="text-sm text-red-700">{error}</p>}
       <button
         type="submit"
@@ -317,7 +306,7 @@ function CreatePanel({
   );
 }
 
-/* ---------- Join a group that exists, or rename it ---------- */
+/* ---------- Join a group that exists, or leave it ---------- */
 
 function JoinPanel({
   db,
@@ -328,41 +317,21 @@ function JoinPanel({
   table: Table;
   onDone: () => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"join" | "rename" | "leave">("join");
+  const [mode, setMode] = useState<"join" | "leave">("join");
   const [name, setName] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [newName, setNewName] = useState(table.name);
-  const [leaving, setLeaving] = useState<string>(table.guests[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const full = table.members >= table.capacity;
 
   async function submitJoin(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await joinTable(db, { tableId: table.id, name, answer });
-      setNotice(`Klart, ${name.trim()} är nu med i ${table.name}.`);
+      await joinTable(db, { tableId: table.id, name });
+      setNotice(`Klart, ${name.trim()} är anmäld till ${table.name}.`);
       setName("");
-      setAnswer("");
-      await onDone();
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitRename(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await renameTable(db, { tableId: table.id, answer, name: newName });
-      setNotice(`Gruppen heter nu ${newName.trim()}.`);
-      setAnswer("");
-      setMode("join");
       await onDone();
     } catch (err) {
       setError(describeError(err));
@@ -373,14 +342,12 @@ function JoinPanel({
 
   async function submitLeave(e: React.FormEvent) {
     e.preventDefault();
-    const guest = table.guests.find((g) => g.id === leaving);
-    if (!guest) return;
     setBusy(true);
     setError(null);
     try {
-      await leaveTable(db, { tableId: table.id, guestId: guest.id, answer });
-      setNotice(`${guest.name} är borttagen från ${table.name}.`);
-      setAnswer("");
+      await leaveTable(db, { tableId: table.id, name });
+      setNotice(`${name.trim()} är borttagen från ${table.name}.`);
+      setName("");
       setMode("join");
       await onDone();
     } catch (err) {
@@ -390,7 +357,7 @@ function JoinPanel({
     }
   }
 
-  function switchTo(next: "join" | "rename" | "leave") {
+  function switchTo(next: "join" | "leave") {
     setMode(next);
     setError(null);
     setNotice(null);
@@ -400,87 +367,51 @@ function JoinPanel({
     <div className="space-y-3">
       <PanelHeader title={table.name} color={slotColor(table.slot)} />
       <p className="text-sm text-neutral-600">
-        Grupp {table.slot} · {table.guests.length} {table.guests.length === 1 ? "person" : "personer"}
+        Grupp {table.slot} · {table.members} av {table.capacity} anmälda
+        {full ? " · Fullt" : ""}
       </p>
-      <ul className="flex flex-wrap gap-2">
-        {table.guests.map((g) => (
-          <li key={g.id} className="rounded-full bg-purple-soft px-3 py-1 text-sm text-purple-deep">
-            {g.name}
-          </li>
-        ))}
-      </ul>
 
       {notice && (
-        <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">{notice}</p>
+        <p className="rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800">{notice}</p>
       )}
 
       {mode === "join" && (
         <form onSubmit={submitJoin} className="space-y-3 border-t border-neutral-200 pt-3">
-          <p className="font-medium">Vill du vara med? Svara på gruppens fråga.</p>
-          <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">{table.question}</p>
-          <Field label="Ditt svar" value={answer} onChange={setAnswer} />
-          <Field label="Ditt namn" value={name} onChange={setName} placeholder="För- och efternamn" />
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
-          >
-            {busy ? "Lägger till…" : "Gå med"}
-          </button>
-          <div className="flex justify-center gap-6">
-            <LinkButton onClick={() => switchTo("rename")}>Byt namn på gruppen</LinkButton>
-            <LinkButton onClick={() => switchTo("leave")}>Ta bort mig</LinkButton>
-          </div>
-        </form>
-      )}
-
-      {mode === "rename" && (
-        <form onSubmit={submitRename} className="space-y-3 border-t border-neutral-200 pt-3">
-          <p className="font-medium">Byt namn. Bara den som kan svaret får göra det.</p>
-          <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">{table.question}</p>
-          <Field label="Svaret" value={answer} onChange={setAnswer} />
-          <Field label="Nytt namn" value={newName} onChange={setNewName} />
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
-          >
-            {busy ? "Sparar…" : "Spara namnet"}
-          </button>
+          {full ? (
+            <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">
+              Gruppen är full. Prova en annan, eller starta en egen.
+            </p>
+          ) : (
+            <>
+              <p className="font-medium">Vill du sitta här? Skriv ditt namn.</p>
+              <Field label="Ditt namn" value={name} onChange={setName} placeholder="För- och efternamn" />
+              {error && <p className="text-sm text-red-700">{error}</p>}
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
+              >
+                {busy ? "Anmäler…" : "Anmäl mig"}
+              </button>
+            </>
+          )}
           <div className="flex justify-center">
-            <LinkButton onClick={() => switchTo("join")}>Avbryt</LinkButton>
+            <LinkButton onClick={() => switchTo("leave")}>Ta bort mig från gruppen</LinkButton>
           </div>
         </form>
       )}
 
       {mode === "leave" && (
         <form onSubmit={submitLeave} className="space-y-3 border-t border-neutral-200 pt-3">
-          <p className="font-medium">Ta bort ett namn. Bara den som kan svaret får göra det.</p>
-          <p className="rounded-2xl bg-purple-soft px-4 py-3 text-purple-deep">{table.question}</p>
-          <Field label="Svaret" value={answer} onChange={setAnswer} />
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">Vem ska bort?</span>
-            <select
-              value={leaving}
-              onChange={(e) => setLeaving(e.target.value)}
-              className="w-full rounded-2xl border border-purple/25 bg-white px-4 py-3 text-base"
-            >
-              {table.guests.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p className="font-medium">Skriv ditt namn så som du anmälde det.</p>
+          <Field label="Ditt namn" value={name} onChange={setName} placeholder="För- och efternamn" />
           {error && <p className="text-sm text-red-700">{error}</p>}
           <button
             type="submit"
-            disabled={busy || !leaving}
+            disabled={busy}
             className="w-full rounded-full border-2 border-red-700 bg-white px-4 py-3 font-semibold text-red-700 active:bg-red-50 disabled:opacity-50"
           >
-            {busy ? "Tar bort…" : "Ta bort från gruppen"}
+            {busy ? "Tar bort…" : "Ta bort mig"}
           </button>
           <div className="flex justify-center">
             <LinkButton onClick={() => switchTo("join")}>Avbryt</LinkButton>

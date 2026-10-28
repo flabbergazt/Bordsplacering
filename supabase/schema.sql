@@ -1,13 +1,13 @@
 -- Bordsplacering: groups ("tables" in the database, the name stuck from the
--- first version), their members ("guests") and the one secret per group
--- (the answer).
+-- first version) and their members ("guests").
 --
--- Run this once in the Supabase SQL editor for a fresh project.
+-- Run this in the Supabase SQL editor. It is safe to run again: it
+-- replaces what is there.
 --
--- There is no login. Everyone reads tables and guests through the anon key.
--- Nothing is written directly: all writes go through the two functions at
--- the bottom, which run with the database owner's rights (security definer)
--- so they can read the answer that the browser never gets to see.
+-- There is no login and no secret. Everyone reads the groups and how many
+-- have joined each; nobody can read the names through the API. Writes go
+-- through the functions at the bottom, which run with the database owner's
+-- rights (security definer).
 
 create extension if not exists pgcrypto;
 
@@ -15,16 +15,8 @@ create table if not exists public.tables (
   id         uuid primary key default gen_random_uuid(),
   slot       integer not null unique,          -- the group's number on screen
   name       text not null,
-  question   text not null,                    -- shown to everyone
-  capacity   integer not null default 8,
+  capacity   integer not null default 10,
   created_at timestamptz not null default now()
-);
-
--- The answer lives in its own table with row-level security on and no
--- policies, so the API cannot read it at all. Only the functions below can.
-create table if not exists public.table_answers (
-  table_id uuid primary key references public.tables (id) on delete cascade,
-  answer   text not null                       -- normalized: lower case, trimmed
 );
 
 create table if not exists public.guests (
@@ -33,29 +25,40 @@ create table if not exists public.guests (
   name       text not null,
   name_key   text not null,                    -- normalized name, for the duplicate rule
   created_at timestamptz not null default now(),
-  unique (table_id, name_key)                  -- same name twice on one table is refused
+  unique (table_id, name_key)                  -- same name twice in one group is refused
 );
 
-alter table public.tables        enable row level security;
-alter table public.table_answers enable row level security;
-alter table public.guests        enable row level security;
+-- Leftovers from the version with a security question.
+drop function if exists public.create_table(integer, text, text, text, text, integer);
+drop function if exists public.join_table(uuid, text, text);
+drop function if exists public.rename_table(uuid, text, text);
+drop function if exists public.leave_table(uuid, uuid, text);
+drop table if exists public.table_answers;
+alter table public.tables drop column if exists question;
+alter table public.tables alter column capacity set default 10;
+
+alter table public.tables enable row level security;
+alter table public.guests enable row level security;
 
 drop policy if exists "anyone can read tables" on public.tables;
 create policy "anyone can read tables"
   on public.tables for select to anon, authenticated using (true);
 
+-- Names stay private: no policy on guests, and no grant either.
 drop policy if exists "anyone can read guests" on public.guests;
-create policy "anyone can read guests"
-  on public.guests for select to anon, authenticated using (true);
+revoke all on public.guests from anon, authenticated;
 
--- Say explicitly what the API roles may read, so the schema works whether or
--- not the project "automatically exposes new tables". Nothing may be written
--- directly; writes go through the functions below.
+-- How many have joined each group. A view runs with the owner's rights, so
+-- it can count rows the caller may not read.
+create or replace view public.group_counts as
+  select table_id, count(*)::integer as members
+    from public.guests
+   group by table_id;
+
 grant usage on schema public to anon, authenticated;
-grant select on public.tables, public.guests to anon, authenticated;
-revoke all on public.table_answers from anon, authenticated;
+grant select on public.tables, public.group_counts to anon, authenticated;
 
--- "Stockholm " and "stockholm" are the same answer, and the same name.
+-- "Anna  Svensson " and "anna svensson" are the same name.
 create or replace function public.normalize_text(input text)
 returns text
 language sql
@@ -64,15 +67,13 @@ as $$
   select lower(regexp_replace(btrim(coalesce(input, '')), '\s+', ' ', 'g'));
 $$;
 
--- Start a table on a free spot in the room. The creator is seated at once.
+-- Start a group on a free card. The creator joins at once.
 -- Errors come back as plain codes that the app translates.
 create or replace function public.create_table(
   p_slot     integer,
   p_name     text,
   p_creator  text,
-  p_question text,
-  p_answer   text,
-  p_capacity integer default 8
+  p_capacity integer default 10
 )
 returns uuid
 language plpgsql
@@ -82,18 +83,13 @@ as $$
 declare
   v_id uuid;
 begin
-  if length(normalize_text(p_name)) = 0     then raise exception 'table_name_required'; end if;
-  if length(normalize_text(p_creator)) = 0  then raise exception 'name_required'; end if;
-  if length(normalize_text(p_question)) = 0 then raise exception 'question_required'; end if;
-  if length(normalize_text(p_answer)) = 0   then raise exception 'answer_required'; end if;
-  if p_capacity < 1 or p_capacity > 30      then raise exception 'bad_capacity'; end if;
+  if length(normalize_text(p_name)) = 0    then raise exception 'table_name_required'; end if;
+  if length(normalize_text(p_creator)) = 0 then raise exception 'name_required'; end if;
+  if p_capacity < 1 or p_capacity > 100    then raise exception 'bad_capacity'; end if;
 
-  insert into tables (slot, name, question, capacity)
-    values (p_slot, btrim(p_name), btrim(p_question), p_capacity)
+  insert into tables (slot, name, capacity)
+    values (p_slot, btrim(p_name), p_capacity)
     returning id into v_id;
-
-  insert into table_answers (table_id, answer)
-    values (v_id, normalize_text(p_answer));
 
   insert into guests (table_id, name, name_key)
     values (v_id, btrim(p_creator), normalize_text(p_creator));
@@ -105,12 +101,10 @@ exception
 end;
 $$;
 
--- Sit down at a table. Right answer required; table must have room; the
--- same name cannot be seated twice at the same table.
+-- Join a group. It must have room, and the same name cannot join twice.
 create or replace function public.join_table(
   p_table_id uuid,
-  p_name     text,
-  p_answer   text
+  p_name     text
 )
 returns uuid
 language plpgsql
@@ -118,21 +112,14 @@ security definer
 set search_path = public
 as $$
 declare
-  v_answer   text;
   v_capacity integer;
   v_count    integer;
   v_id       uuid;
 begin
   if length(normalize_text(p_name)) = 0 then raise exception 'name_required'; end if;
 
-  select a.answer, t.capacity
-    into v_answer, v_capacity
-    from tables t
-    join table_answers a on a.table_id = t.id
-   where t.id = p_table_id;
-
+  select capacity into v_capacity from tables where id = p_table_id;
   if not found then raise exception 'table_not_found'; end if;
-  if v_answer <> normalize_text(p_answer) then raise exception 'wrong_answer'; end if;
 
   select count(*) into v_count from guests where table_id = p_table_id;
   if v_count >= v_capacity then raise exception 'table_full'; end if;
@@ -148,10 +135,9 @@ exception
 end;
 $$;
 
--- Rename a group. Right answer required, so only its members can.
-create or replace function public.rename_table(
+-- Leave a group: removes the member with that name.
+create or replace function public.leave_table(
   p_table_id uuid,
-  p_answer   text,
   p_name     text
 )
 returns void
@@ -159,45 +145,15 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_answer text;
 begin
-  if length(normalize_text(p_name)) = 0 then raise exception 'table_name_required'; end if;
-
-  select answer into v_answer from table_answers where table_id = p_table_id;
-  if not found then raise exception 'table_not_found'; end if;
-  if v_answer <> normalize_text(p_answer) then raise exception 'wrong_answer'; end if;
-
-  update tables set name = btrim(p_name) where id = p_table_id;
-end;
-$$;
-
--- Leave a group. Right answer required, so nobody can remove someone else
--- by accident, and nobody outside the group can remove anyone at all.
-create or replace function public.leave_table(
-  p_table_id uuid,
-  p_guest_id uuid,
-  p_answer   text
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_answer text;
-begin
-  select answer into v_answer from table_answers where table_id = p_table_id;
-  if not found then raise exception 'table_not_found'; end if;
-  if v_answer <> normalize_text(p_answer) then raise exception 'wrong_answer'; end if;
-
-  delete from guests where id = p_guest_id and table_id = p_table_id;
+  delete from guests
+   where table_id = p_table_id
+     and name_key = normalize_text(p_name);
   if not found then raise exception 'guest_not_found'; end if;
 end;
 $$;
 
 grant execute on function public.normalize_text(text) to anon, authenticated;
-grant execute on function public.leave_table(uuid, uuid, text) to anon, authenticated;
-grant execute on function public.rename_table(uuid, text, text) to anon, authenticated;
-grant execute on function public.create_table(integer, text, text, text, text, integer) to anon, authenticated;
-grant execute on function public.join_table(uuid, text, text) to anon, authenticated;
+grant execute on function public.create_table(integer, text, text, integer) to anon, authenticated;
+grant execute on function public.join_table(uuid, text) to anon, authenticated;
+grant execute on function public.leave_table(uuid, text) to anon, authenticated;

@@ -26,8 +26,8 @@ export const SUGGESTIONS = [
 /** Blank cards to show after the suggestions. */
 export const BLANK_CARDS = 2;
 
-/** Big enough that no group is ever refused. */
-export const GROUP_CAPACITY = 30;
+/** Seats per group. At this many the card says "Fullt". */
+export const GROUP_CAPACITY = 10;
 
 export type Card = { slot: number; table: Table | null; suggestion: string | null };
 

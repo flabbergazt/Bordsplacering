@@ -3,9 +3,9 @@
 # Bordsplacering
 
 A one-page web app for a party: guests open a link on their phone, browse
-groups as cards in a carousel, join one or start their own. No login. A
-group is protected by a question its creator wrote; the right answer is
-the only key. Next.js + Supabase, deployed on Vercel.
+groups as cards in a carousel, join one or start their own. No login, no
+secret. Names are never shown, only how many have joined each group, and
+a group is full at ten. Next.js + Supabase, deployed on Vercel.
 
 Owner: Max, a product manager, not a developer. Reply in Swedish; keep code,
 file names and commands in English. Agree the scope before writing code.
@@ -21,11 +21,10 @@ what is knowingly broken.
   is a placeholder; the card is not active until someone starts it.
 - `supabase/schema.sql` is the data model and the only way to write. In the
   database a group is still called a `table` and a member a `guest`; the
-  names stuck from the first version. The answer to a group's question is
-  stored in `table_answers`, which the API cannot read. Joining and
-  renaming go through `join_table()` and `rename_table()`, which compare
-  answers on the server. Never put the answer in a column the browser can
-  select.
+  names stuck from the first version. The API cannot read `guests` at all;
+  it reads counts from the `group_counts` view. Joining and leaving go
+  through `join_table()` and `leave_table()`. Max reads the names in the
+  Supabase table editor before the seating. Never grant select on `guests`.
 - `src/lib/db.ts` is every read and write the page makes, and the Swedish
   translation of the error codes the database raises.
 - `src/app/page.tsx` runs on the server, reads `SUPABASE_URL` and
