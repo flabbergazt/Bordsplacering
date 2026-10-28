@@ -124,6 +124,7 @@ export default function App({
             centeredSlides
             loop
             slidesPerView="auto"
+            noSwipingSelector="input, button, label"
             slideToClickedSlide
             initialSlide={activeIndex}
             coverflowEffect={{ rotate: 0, stretch: -28, depth: 0, scale: 0.86, modifier: 1, slideShadows: false }}
@@ -135,7 +136,11 @@ export default function App({
               <SwiperSlide key={c.slot} className="group-slide">
                 {/* A tap on a card to the side brings it to the middle. */}
                 <div className="h-full w-full" onClick={() => swiper?.slideToLoop(i)}>
-                  <GroupCard card={c} />
+                  {!c.table && c.slot === activeSlot ? (
+                    <CreateCard key={c.slot} db={db} slot={c.slot} suggestion={c.suggestion} onDone={refresh} />
+                  ) : (
+                    <GroupCard card={c} />
+                  )}
                 </div>
               </SwiperSlide>
             ))}
@@ -149,13 +154,9 @@ export default function App({
         <p className="mx-auto mt-4 max-w-xl rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">{loadError}</p>
       )}
 
-      {loaded && active && (
+      {loaded && active?.table && (
         <section id="panel" className="mx-4 mt-5 scroll-mt-4 rounded-3xl border border-purple/15 bg-white p-5 shadow-sm sm:mx-auto sm:max-w-xl">
-          {active.table ? (
-            <JoinPanel key={active.table.id} db={db} table={active.table} onDone={refresh} />
-          ) : (
-            <CreatePanel key={active.slot} db={db} slot={active.slot} suggestion={active.suggestion} onDone={refresh} />
-          )}
+          <JoinPanel key={active.table.id} db={db} table={active.table} onDone={refresh} />
         </section>
       )}
 
@@ -313,9 +314,9 @@ function countLabel(t: Table): string {
   return t.members >= t.capacity ? `Fullt · ${t.members}/${t.capacity}` : `${t.members}/${t.capacity}`;
 }
 
-/* ---------- Start a group on a free card ---------- */
+/* ---------- Start a group: the form lives inside the free card ---------- */
 
-function CreatePanel({
+function CreateCard({
   db,
   slot,
   suggestion,
@@ -336,12 +337,7 @@ function CreatePanel({
     setBusy(true);
     setError(null);
     try {
-      await createTable(db, {
-        slot,
-        name: tableName,
-        creator,
-        capacity: GROUP_CAPACITY,
-      });
+      await createTable(db, { slot, name: tableName, creator, capacity: GROUP_CAPACITY });
       await onDone();
     } catch (err) {
       setError(describeError(err));
@@ -351,23 +347,57 @@ function CreatePanel({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <PanelHeader title={suggestion ? `Starta ${suggestion}` : "Starta en ny grupp"} color="#d4d4d8" />
-      <p className="text-sm text-neutral-600">
+    <form
+      onSubmit={submit}
+      className="flex h-full w-full flex-col rounded-3xl border-2 border-dashed border-purple/40 bg-white p-4 text-left shadow-md"
+    >
+      <h3 className="text-lg font-bold leading-tight text-purple">
+        {suggestion ? `Starta ${suggestion}` : "Starta en ny grupp"}
+      </h3>
+      <p className="mt-1 text-xs leading-snug text-neutral-600">
         Du blir första anmäld. Plats för {GROUP_CAPACITY} personer.
         {suggestion ? " Namnet är ett förslag, byt om du vill." : ""}
       </p>
-      <Field label="Gruppens namn" value={tableName} onChange={setTableName} placeholder="t.ex. Gänget från Lund" />
-      <Field label="Ditt namn" value={creator} onChange={setCreator} placeholder="För- och efternamn" />
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      <div className="mt-3 space-y-2">
+        <SmallField label="Gruppens namn" value={tableName} onChange={setTableName} placeholder="t.ex. Gänget från Lund" />
+        <SmallField label="Ditt namn" value={creator} onChange={setCreator} placeholder="För- och efternamn" />
+      </div>
+      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-full bg-purple px-4 py-3 font-semibold text-white active:bg-purple-deep disabled:opacity-50"
+        className="mt-auto w-full rounded-full bg-purple px-4 py-2.5 text-sm font-semibold text-white active:bg-purple-deep disabled:opacity-50"
       >
         {busy ? "Startar…" : "Starta gruppen"}
       </button>
     </form>
+  );
+}
+
+function SmallField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-0.5 block text-xs font-medium">{label}</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required
+        autoComplete="off"
+        className="w-full rounded-xl border border-purple/25 bg-white px-3 py-2 text-base"
+      />
+    </label>
   );
 }
 
