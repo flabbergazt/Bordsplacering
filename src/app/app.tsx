@@ -20,6 +20,7 @@ import { makeClient } from "@/lib/supabase";
 import { createTable, describeError, joinTable, leaveTable, loadTables, type Table } from "@/lib/db";
 import { darken, slotColor } from "@/lib/colors";
 import { buildCards, GROUP_CAPACITY, type Card } from "@/lib/groups";
+import { kr, loadFunding, summarize, type Funding } from "@/lib/funding";
 
 export default function App({
   url,
@@ -30,6 +31,7 @@ export default function App({
 }) {
   const db = useMemo(() => (url && anonKey ? makeClient(url, anonKey) : null), [url, anonKey]);
   const [tables, setTables] = useState<Table[]>([]);
+  const [funding, setFunding] = useState<Funding | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
@@ -38,7 +40,9 @@ export default function App({
   const refresh = useCallback(async () => {
     if (!db) return;
     try {
-      setTables(await loadTables(db));
+      const [t, f] = await Promise.all([loadTables(db), loadFunding(db)]);
+      setTables(t);
+      setFunding(f);
       setLoadError(null);
     } catch (err) {
       setLoadError(describeError(err));
@@ -106,6 +110,7 @@ export default function App({
           <p className="mt-4 max-w-md text-white/90">
             Vilka vill du sitta med på middagen? Bläddra, kolla var dina kompisar sitter, gå med i en grupp eller starta en egen grupp på ett ledigt kort.
           </p>
+          {funding && funding.items.length > 0 && <FundingBar funding={funding} />}
         </div>
       </header>
 
@@ -194,6 +199,66 @@ export default function App({
         </ul>
       </section>
     </main>
+  );
+}
+
+/* ---------- The crowdfunding bar ---------- */
+
+function FundingBar({ funding }: { funding: Funding }) {
+  const sum = summarize(funding);
+  return (
+    <section className="mt-6 rounded-3xl bg-white/10 p-4" aria-label="Insamling">
+      <h2 className="text-lg font-bold leading-snug">Vill du vara med och bidra till en fest med extra allt?</h2>
+      {funding.message && <p className="mt-1 text-sm text-white/85">{funding.message}</p>}
+
+      <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-white/20">
+        <div
+          className="h-full rounded-full bg-white transition-[width] duration-700"
+          style={{ width: `${Math.round(sum.share * 100)}%` }}
+        />
+      </div>
+      <p className="mt-2 flex items-baseline justify-between text-sm">
+        <span>
+          <span className="text-xl font-bold">{kr(sum.raised)}</span>
+          <span className="text-white/80"> av {kr(sum.total)}</span>
+        </span>
+        <span className="text-white/80">{Math.round(sum.share * 100)} %</span>
+      </p>
+
+      <ul className="mt-3 space-y-1.5 text-sm">
+        {sum.statuses.map(({ item, status }) => (
+          <li key={item.id} className="flex items-center justify-between gap-3">
+            <span className={status.kind === "waiting" ? "text-white/60" : ""}>
+              <span className="mr-2 inline-block w-4 text-center">
+                {status.kind === "covered" ? "✓" : status.kind === "next" ? "→" : "·"}
+              </span>
+              {item.name}
+            </span>
+            <span className={`shrink-0 ${status.kind === "waiting" ? "text-white/60" : "text-white/90"}`}>
+              {status.kind === "covered"
+                ? "Klart"
+                : status.kind === "next"
+                  ? `${kr(status.missing)} kvar`
+                  : kr(item.amount)}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {sum.missing > 0 ? (
+        <p className="mt-3 text-sm text-white/90">
+          Om alla swishar <span className="font-bold">{kr(sum.perGuest)}</span> får vi med allt.
+          {funding.swish ? (
+            <>
+              {" "}
+              Swisha till <span className="font-bold">{funding.swish}</span>.
+            </>
+          ) : null}
+        </p>
+      ) : (
+        <p className="mt-3 text-sm font-semibold">Allt är finansierat. Tack!</p>
+      )}
+    </section>
   );
 }
 

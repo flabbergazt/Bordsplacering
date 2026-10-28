@@ -157,3 +157,44 @@ grant execute on function public.normalize_text(text) to anon, authenticated;
 grant execute on function public.create_table(integer, text, text, integer) to anon, authenticated;
 grant execute on function public.join_table(uuid, text) to anon, authenticated;
 grant execute on function public.leave_table(uuid, text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Crowdfunding: what the extras cost and how much has come in.
+--
+-- Max edits these two tables by hand in the Supabase table editor; the app
+-- only reads them. The dashboard bypasses row-level security, the API
+-- cannot write.
+
+-- One row only. Keep the amount raised, how many guests to divide by, the
+-- Swish number and an optional line of text.
+create table if not exists public.funding (
+  only_row        boolean primary key default true check (only_row),
+  raised          integer not null default 0,     -- kr received so far
+  expected_guests integer not null default 105,   -- for "per person" maths
+  swish           text,                           -- number to swish to
+  message         text,                           -- optional line under the bar
+  updated_at      timestamptz not null default now()
+);
+insert into public.funding (only_row) values (true) on conflict do nothing;
+
+-- One row per thing to pay for. Lower priority number = paid for first.
+create table if not exists public.funding_items (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,                       -- "Liveband"
+  amount     integer not null check (amount >= 0),-- kr
+  priority   integer not null default 100,        -- 1 is first
+  created_at timestamptz not null default now()
+);
+
+alter table public.funding       enable row level security;
+alter table public.funding_items enable row level security;
+
+drop policy if exists "anyone can read funding" on public.funding;
+create policy "anyone can read funding"
+  on public.funding for select to anon, authenticated using (true);
+
+drop policy if exists "anyone can read funding items" on public.funding_items;
+create policy "anyone can read funding items"
+  on public.funding_items for select to anon, authenticated using (true);
+
+grant select on public.funding, public.funding_items to anon, authenticated;

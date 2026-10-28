@@ -25,6 +25,11 @@ what is knowingly broken.
   it reads counts from the `group_counts` view. Joining and leaving go
   through `join_table()` and `leave_table()`. Max reads the names in the
   Supabase table editor before the seating. Never grant select on `guests`.
+- Crowdfunding: `funding` (one row: raised, expected guests, Swish number,
+  message) and `funding_items` (name, amount, priority) are edited by Max
+  in the Supabase table editor and only read by the app. `src/lib/funding.ts`
+  does the maths: items are covered in priority order, the bar sits under
+  the title.
 - `src/lib/db.ts` is every read and write the page makes, and the Swedish
   translation of the error codes the database raises.
 - `src/app/page.tsx` runs on the server, reads `SUPABASE_URL` and
